@@ -157,9 +157,9 @@ fun BoxSpreadScreen(modifier: Modifier = Modifier) {
                 ResultRow("Expiration", result.expiration.format(dateFormatter))
                 ResultRow("Strikes", "${result.k1} / ${result.k2}")
                 ResultRow("Payoff width (K2 − K1)", result.width.formatCurrency())
-                ResultRow("Net debit", result.netDebit.formatCurrency())
-                ResultRow("Implied rate", "${result.impliedRate * 100.0}%")
-                ResultRow("Annualized rate", "${result.annualizedRate * 100.0}%")
+                ResultRow("Net credit received", result.netCredit.formatCurrency())
+                ResultRow("Borrowing rate", "${result.impliedRate * 100.0}%")
+                ResultRow("Annualized borrowing rate", "${result.annualizedRate * 100.0}%")
                 ResultRow("Days to expiration", result.daysToExpiration.toString())
 
                 // Leg quotes: bid / ask for all four options
@@ -179,10 +179,10 @@ fun BoxSpreadScreen(modifier: Modifier = Modifier) {
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                 )
-                ResultRow("BUY Call K1", "strike ${result.k1}, ask ${result.callK1Ask.formatCurrency()}")
-                ResultRow("SELL Call K2", "strike ${result.k2}, bid ${result.callK2Bid.formatCurrency()}")
-                ResultRow("SELL Put K1", "strike ${result.k1}, bid ${result.putK1Bid.formatCurrency()}")
-                ResultRow("BUY Put K2", "strike ${result.k2}, ask ${result.putK2Ask.formatCurrency()}")
+                ResultRow("SELL Call K1", "strike ${result.k1}, bid ${result.callK1Bid.formatCurrency()}")
+                ResultRow("BUY Call K2", "strike ${result.k2}, ask ${result.callK2Ask.formatCurrency()}")
+                ResultRow("BUY Put K1", "strike ${result.k1}, ask ${result.putK1Ask.formatCurrency()}")
+                ResultRow("SELL Put K2", "strike ${result.k2}, bid ${result.putK2Bid.formatCurrency()}")
 
                 // What is needed to reach the benchmark rate
                 if (result.benchmarkRate > 0.0 && result.daysToExpiration > 0) {
@@ -191,27 +191,27 @@ fun BoxSpreadScreen(modifier: Modifier = Modifier) {
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                     )
-                    ResultRow("Needed net debit", result.neededNetDebitForBenchmark.formatCurrency())
-                    val adjustment = result.debitAdjustmentForBenchmark
+                    ResultRow("Needed net credit", result.neededNetCreditForBenchmark.formatCurrency())
+                    val adjustment = result.creditAdjustmentForBenchmark
                     if (adjustment > 0.0) {
-                        ResultRow("Debit must come down by", adjustment.formatCurrency())
+                        ResultRow("Credit exceeds needed by", adjustment.formatCurrency())
                     } else if (adjustment < 0.0) {
-                        ResultRow("Debit can rise by", (-adjustment).formatCurrency())
+                        ResultRow("Credit short by", (-adjustment).formatCurrency())
                     } else {
-                        ResultRow("Debit adjustment", "0.00")
+                        ResultRow("Credit adjustment", "0.00")
                     }
                 }
 
                 if (result.isOpportunity) {
                     Text(
-                        text = "OPPORTUNITY: annualized rate above benchmark",
+                        text = "GOOD LOAN: borrowing rate below benchmark",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFF2E7D32),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp)
                     )
                 } else {
                     Text(
-                        text = "Below benchmark rate — not an opportunity at current quotes.",
+                        text = "Borrowing rate at or above benchmark — not a good loan at current quotes.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 16.dp)

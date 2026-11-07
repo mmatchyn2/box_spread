@@ -38,11 +38,11 @@ class BoxSpreadCalculatorTest {
             benchmarkRate = 5.0
         )
 
-        assertEquals(20.0, result.netDebit, 0.001)
+        assertEquals(20.0, result.netCredit, 0.001)
     }
 
     @Test
-    fun `computes implied rate as width divided by netDebit`() {
+    fun `computes implied rate as width divided by netCredit`() {
         val result = BoxSpreadCalculator.calculate(
             underlying = "SPX",
             expiration = LocalDate.now().plusDays(30),
@@ -77,7 +77,7 @@ class BoxSpreadCalculatorTest {
     }
 
     @Test
-    fun `isOpportunity when annualized rate above benchmark`() {
+    fun `not an opportunity when annualized rate above benchmark`() {
         val result = BoxSpreadCalculator.calculate(
             underlying = "SPX",
             expiration = LocalDate.now().plusDays(30),
@@ -90,11 +90,11 @@ class BoxSpreadCalculatorTest {
             benchmarkRate = 1.0
         )
 
-        assertTrue(result.isOpportunity)
+        assertFalse(result.isOpportunity)
     }
 
     @Test
-    fun `not an opportunity when annualized rate below benchmark`() {
+    fun `is an opportunity when annualized rate below benchmark`() {
         val result = BoxSpreadCalculator.calculate(
             underlying = "SPX",
             expiration = LocalDate.now().plusDays(30),
@@ -107,7 +107,7 @@ class BoxSpreadCalculatorTest {
             benchmarkRate = 100.0
         )
 
-        assertFalse(result.isOpportunity)
+        assertTrue(result.isOpportunity)
     }
 
     @Test
@@ -129,7 +129,7 @@ class BoxSpreadCalculatorTest {
     }
 
     @Test
-    fun `invalid when netDebit is less than or equal 0`() {
+    fun `invalid when netCredit is less than or equal 0`() {
         val result = BoxSpreadCalculator.calculate(
             underlying = "SPX",
             expiration = LocalDate.now().plusDays(30),
@@ -165,11 +165,11 @@ class BoxSpreadCalculatorTest {
     }
 
     @Test
-    fun `computes needed net debit and adjustment for benchmark rate`() {
-        // width = 100, netDebit = 20, days = 30, benchmark = 5%
+    fun `computes needed net credit and adjustment for benchmark rate`() {
+        // width = 100, netCredit = 20, days = 30, benchmark = 5%
         // annualized = 100/20 * 365/30 = 5.0 * 12.1667 = 60.83%
-        // neededDebit = 100 * 365 / (0.05 * 30) = 36500 / 1.5 = 24333.33
-        // adjustment = 20 - 24333.33 = -24313.33 (debit can rise)
+        // neededCredit = 100 * 365 / (0.05 * 30) = 36500 / 1.5 = 24333.33
+        // adjustment = 20 - 24333.33 = -24313.33 (credit short)
         val result = BoxSpreadCalculator.calculate(
             underlying = "SPX",
             expiration = LocalDate.now().plusDays(30),
@@ -183,7 +183,7 @@ class BoxSpreadCalculatorTest {
         )
 
         assertTrue(result.isValid)
-        assertTrue(result.neededNetDebitForBenchmark > 0.0)
-        assertEquals(20.0 - result.neededNetDebitForBenchmark, result.debitAdjustmentForBenchmark, 0.01)
+        assertTrue(result.neededNetCreditForBenchmark > 0.0)
+        assertEquals(20.0 - result.neededNetCreditForBenchmark, result.creditAdjustmentForBenchmark, 0.01)
     }
 }

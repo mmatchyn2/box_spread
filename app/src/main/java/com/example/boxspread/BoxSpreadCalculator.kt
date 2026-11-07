@@ -4,7 +4,17 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 /**
- * Result of a box spread calculation.
+ * Result of a reverse box-spread (box-spread loan) calculation.
+ *
+ * A reverse box consists of four legs, same expiration, K1 < K2:
+ *   Short call K1 + Long call K2 + Short put K2 + Long put K1
+ *
+ * You receive a net CREDIT upfront and pay fixed width (K2 − K1) at expiration.
+ * This is borrowing — you pay the implied annualized rate as interest.
+ *
+ * Net credit = call K1 bid − call K2 ask + put K2 bid − put K1 ask
+ * Borrowing rate = width / netCredit, annualized by days to expiration
+ * Lower rate = cheaper loan = better opportunity
  */
 data class BoxSpreadResult(
     val underlying: String,
@@ -12,7 +22,7 @@ data class BoxSpreadResult(
     val k1: Double,
     val k2: Double,
     val width: Double,
-    val netDebit: Double,
+    val netCredit: Double,
     val impliedRate: Double,
     val annualizedRate: Double,
     val daysToExpiration: Long,
@@ -29,25 +39,27 @@ data class BoxSpreadResult(
     val putK1Ask: Double,
     val putK2Bid: Double,
     val putK2Ask: Double,
-    // Net debit required to achieve the benchmark annualized rate
-    val neededNetDebitForBenchmark: Double,
-    // How much the current net debit must decrease to hit the benchmark rate
-    val debitAdjustmentForBenchmark: Double
+    // Net credit required to achieve the benchmark borrowing rate
+    val neededNetCreditForBenchmark: Double,
+    // How much current net credit exceeds the needed amount (positive = good)
+    val creditAdjustmentForBenchmark: Double
 )
 
 /**
- * Pure box-spread calculation logic. No Android dependencies — fully testable on the JVM.
+ * Pure reverse box-spread calculation logic. No Android dependencies — fully testable on the JVM.
  *
- * A box spread consists of four legs, same expiration, K1 < K2:
- *   Long call K1 + Short call K2 + Long put K2 + Short put K1
+ * A reverse box (box-spread loan) consists of four legs, same expiration, K1 < K2:
+ *   Short call K1 + Long call K2 + Short put K2 + Long put K1
  *
- * Payoff at expiration = K2 − K1 (constant width)
- * Net debit = (call K1 − call K2) + (put K2 − put K1)
- * Implied annualized rate = (width / netDebit), annualized by days to expiration
+ * You receive net credit upfront and pay constant width (K2 − K1) at expiration.
+ * This is borrowing — you pay the implied annualized rate as interest.
  *
- * Needed net debit for benchmark:
- *   neededDebit = width * 365 / (benchmarkRate * daysToExpiration)
- * Debit adjustment = current netDebit - neededDebit (positive = debit must come down)
+ * Net credit = call K1 − call K2 + put K2 − put K1 (using mids)
+ * Borrowing rate = width / netCredit, annualized by days to expiration
+ *
+ * Needed net credit for benchmark:
+ *   neededCredit = width * 365 / (benchmarkRate * daysToExpiration)
+ * Credit adjustment = current netCredit - neededCredit (positive = rate below benchmark)
  */
 object BoxSpreadCalculator {
 
@@ -74,8 +86,9 @@ object BoxSpreadCalculator {
         val width = k2 - k1
         val daysToExpiration = ChronoUnit.DAYS.between(LocalDate.now(), expiration)
 
-        // Net debit: (call K1 − call K2) + (put K2 − put K1)
-        val netDebit = (callK1Mid - callK2Mid) + (putK2Mid - putK1Mid)
+        // Net credit received: (call K1 − call K2) + (put K2 − put K1)
+        // For reverse box: positive = money received upfront (borrowing)
+        val netCredit = (callK1Mid - callK2Mid) + (putK2Mid - putK1Mid)
 
         if (k1 <= 0.0 || k2 <= k1) {
             return BoxSpreadResult(
@@ -84,7 +97,7 @@ object BoxSpreadCalculator {
                 k1 = k1,
                 k2 = k2,
                 width = width,
-                netDebit = netDebit,
+                netCredit = netCredit,
                 impliedRate = 0.0,
                 annualizedRate = 0.0,
                 daysToExpiration = daysToExpiration,
@@ -96,48 +109,49 @@ object BoxSpreadCalculator {
                 callK2Bid = callK2Bid, callK2Ask = callK2Ask,
                 putK1Bid = putK1Bid, putK1Ask = putK1Ask,
                 putK2Bid = putK2Bid, putK2Ask = putK2Ask,
-                neededNetDebitForBenchmark = 0.0,
-                debitAdjustmentForBenchmark = 0.0
+                neededNetCreditForBenchmark = 0.0,
+                creditAdjustmentForBenchmark = 0.0
             )
         }
 
-        if (netDebit <= 0.0) {
+        if (netCredit <= 0.0) {
             return BoxSpreadResult(
                 underlying = underlying,
                 expiration = expiration,
                 k1 = k1,
                 k2 = k2,
                 width = width,
-                netDebit = netDebit,
+                netCredit = netCredit,
                 impliedRate = 0.0,
                 annualizedRate = 0.0,
                 daysToExpiration = daysToExpiration,
                 isValid = false,
                 isOpportunity = false,
                 benchmarkRate = benchmarkRate,
-                error = "Net debit must be positive (no arbitrage available at these quotes).",
+                error = "Net credit must be positive (no loan available at these quotes).",
                 callK1Bid = callK1Bid, callK1Ask = callK1Ask,
                 callK2Bid = callK2Bid, callK2Ask = callK2Ask,
                 putK1Bid = putK1Bid, putK1Ask = putK1Ask,
                 putK2Bid = putK2Bid, putK2Ask = putK2Ask,
-                neededNetDebitForBenchmark = 0.0,
-                debitAdjustmentForBenchmark = 0.0
+                neededNetCreditForBenchmark = 0.0,
+                creditAdjustmentForBenchmark = 0.0
             )
         }
 
-        val impliedRate = width / netDebit
+        val impliedRate = width / netCredit
         val annualizedRate = if (daysToExpiration > 0) impliedRate * (365.0 / daysToExpiration.toDouble()) else 0.0
-        val isOpportunity = annualizedRate > benchmarkRate
+        // For borrowing, LOWER rate is better — opportunity if below benchmark
+        val isOpportunity = annualizedRate < benchmarkRate
 
-        // Needed net debit to achieve benchmark rate:
-        //   annualizedRate = width / netDebit * (365 / daysToExpiration)
-        //   neededDebit = width * 365 / (benchmarkRate * daysToExpiration)
-        val neededNetDebitForBenchmark = if (benchmarkRate > 0.0 && daysToExpiration > 0) {
+        // Needed net credit to achieve benchmark rate:
+        //   annualizedRate = width / netCredit * (365 / daysToExpiration)
+        //   neededCredit = width * 365 / (benchmarkRate * daysToExpiration)
+        val neededNetCreditForBenchmark = if (benchmarkRate > 0.0 && daysToExpiration > 0) {
             width * 365.0 / (benchmarkRate * daysToExpiration.toDouble())
         } else {
             0.0
         }
-        val debitAdjustmentForBenchmark = netDebit - neededNetDebitForBenchmark
+        val creditAdjustmentForBenchmark = netCredit - neededNetCreditForBenchmark
 
         return BoxSpreadResult(
             underlying = underlying,
@@ -145,7 +159,7 @@ object BoxSpreadCalculator {
             k1 = k1,
             k2 = k2,
             width = width,
-            netDebit = netDebit,
+            netCredit = netCredit,
             impliedRate = impliedRate,
             annualizedRate = annualizedRate,
             daysToExpiration = daysToExpiration,
@@ -157,8 +171,8 @@ object BoxSpreadCalculator {
             callK2Bid = callK2Bid, callK2Ask = callK2Ask,
             putK1Bid = putK1Bid, putK1Ask = putK1Ask,
             putK2Bid = putK2Bid, putK2Ask = putK2Ask,
-            neededNetDebitForBenchmark = neededNetDebitForBenchmark,
-            debitAdjustmentForBenchmark = debitAdjustmentForBenchmark
+            neededNetCreditForBenchmark = neededNetCreditForBenchmark,
+            creditAdjustmentForBenchmark = creditAdjustmentForBenchmark
         )
     }
 }

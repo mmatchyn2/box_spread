@@ -31,7 +31,7 @@ data class BoxSpreadScan(
     val putK1: OptionQuote,
     val putK2: OptionQuote,
     val annualizedRate: Double,
-    val netDebit: Double,
+    val netCredit: Double,
     val width: Double,
     val isOpportunity: Boolean
 )
@@ -106,14 +106,14 @@ object MockQuoteService : QuoteService {
                 val putK2 = fetchQuote(symbol, k2, expiration, "put") ?: continue
 
                 val width = k2 - k1
-                val netDebit = (callK1.mid - callK2.mid) + (putK2.mid - putK1.mid)
+                val netCredit = (callK1.mid - callK2.mid) + (putK2.mid - putK1.mid)
 
-                if (netDebit <= 0.0 || width <= 0.0) {
+                if (netCredit <= 0.0 || width <= 0.0) {
                     k2 += k2Step
                     continue
                 }
 
-                val impliedRate = width / netDebit
+                val impliedRate = width / netCredit
                 val annualizedRate = impliedRate * (365.0 / daysToExp.toDouble())
 
                 results.add(
@@ -125,9 +125,9 @@ object MockQuoteService : QuoteService {
                         putK1 = putK1,
                         putK2 = putK2,
                         annualizedRate = annualizedRate,
-                        netDebit = netDebit,
+                        netCredit = netCredit,
                         width = width,
-                        isOpportunity = annualizedRate > benchmarkRate
+                        isOpportunity = annualizedRate < benchmarkRate
                     )
                 )
                 k2 += k2Step
