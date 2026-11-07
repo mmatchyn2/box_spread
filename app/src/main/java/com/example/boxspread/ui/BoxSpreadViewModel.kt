@@ -102,10 +102,14 @@ class BoxSpreadViewModel : ViewModel() {
                 expiration = exp,
                 k1 = k1Val,
                 k2 = k2Val,
-                callK1Mid = callK1.mid,
-                callK2Mid = callK2.mid,
-                putK1Mid = putK1.mid,
-                putK2Mid = putK2.mid,
+                callK1Bid = callK1.bid,
+                callK1Ask = callK1.ask,
+                callK2Bid = callK2.bid,
+                callK2Ask = callK2.ask,
+                putK1Bid = putK1.bid,
+                putK1Ask = putK1.ask,
+                putK2Bid = putK2.bid,
+                putK2Ask = putK2.ask,
                 benchmarkRate = bench
             )
 

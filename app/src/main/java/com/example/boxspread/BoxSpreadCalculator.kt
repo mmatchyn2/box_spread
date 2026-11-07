@@ -19,7 +19,20 @@ data class BoxSpreadResult(
     val isValid: Boolean,
     val isOpportunity: Boolean,
     val benchmarkRate: Double,
-    val error: String?
+    val error: String?,
+    // Individual option leg quotes (bid / ask)
+    val callK1Bid: Double,
+    val callK1Ask: Double,
+    val callK2Bid: Double,
+    val callK2Ask: Double,
+    val putK1Bid: Double,
+    val putK1Ask: Double,
+    val putK2Bid: Double,
+    val putK2Ask: Double,
+    // Net debit required to achieve the benchmark annualized rate
+    val neededNetDebitForBenchmark: Double,
+    // How much the current net debit must decrease to hit the benchmark rate
+    val debitAdjustmentForBenchmark: Double
 )
 
 /**
@@ -31,6 +44,10 @@ data class BoxSpreadResult(
  * Payoff at expiration = K2 − K1 (constant width)
  * Net debit = (call K1 − call K2) + (put K2 − put K1)
  * Implied annualized rate = (width / netDebit), annualized by days to expiration
+ *
+ * Needed net debit for benchmark:
+ *   neededDebit = width * 365 / (benchmarkRate * daysToExpiration)
+ * Debit adjustment = current netDebit - neededDebit (positive = debit must come down)
  */
 object BoxSpreadCalculator {
 
@@ -39,12 +56,21 @@ object BoxSpreadCalculator {
         expiration: LocalDate,
         k1: Double,
         k2: Double,
-        callK1Mid: Double,
-        callK2Mid: Double,
-        putK1Mid: Double,
-        putK2Mid: Double,
+        callK1Bid: Double,
+        callK1Ask: Double,
+        callK2Bid: Double,
+        callK2Ask: Double,
+        putK1Bid: Double,
+        putK1Ask: Double,
+        putK2Bid: Double,
+        putK2Ask: Double,
         benchmarkRate: Double
     ): BoxSpreadResult {
+        val callK1Mid = (callK1Bid + callK1Ask) / 2.0
+        val callK2Mid = (callK2Bid + callK2Ask) / 2.0
+        val putK1Mid = (putK1Bid + putK1Ask) / 2.0
+        val putK2Mid = (putK2Bid + putK2Ask) / 2.0
+
         val width = k2 - k1
         val daysToExpiration = ChronoUnit.DAYS.between(LocalDate.now(), expiration)
 
@@ -65,7 +91,13 @@ object BoxSpreadCalculator {
                 isValid = false,
                 isOpportunity = false,
                 benchmarkRate = benchmarkRate,
-                error = "Strikes must satisfy 0 < K1 < K2."
+                error = "Strikes must satisfy 0 < K1 < K2.",
+                callK1Bid = callK1Bid, callK1Ask = callK1Ask,
+                callK2Bid = callK2Bid, callK2Ask = callK2Ask,
+                putK1Bid = putK1Bid, putK1Ask = putK1Ask,
+                putK2Bid = putK2Bid, putK2Ask = putK2Ask,
+                neededNetDebitForBenchmark = 0.0,
+                debitAdjustmentForBenchmark = 0.0
             )
         }
 
@@ -83,13 +115,29 @@ object BoxSpreadCalculator {
                 isValid = false,
                 isOpportunity = false,
                 benchmarkRate = benchmarkRate,
-                error = "Net debit must be positive (no arbitrage available at these quotes)."
+                error = "Net debit must be positive (no arbitrage available at these quotes).",
+                callK1Bid = callK1Bid, callK1Ask = callK1Ask,
+                callK2Bid = callK2Bid, callK2Ask = callK2Ask,
+                putK1Bid = putK1Bid, putK1Ask = putK1Ask,
+                putK2Bid = putK2Bid, putK2Ask = putK2Ask,
+                neededNetDebitForBenchmark = 0.0,
+                debitAdjustmentForBenchmark = 0.0
             )
         }
 
         val impliedRate = width / netDebit
         val annualizedRate = if (daysToExpiration > 0) impliedRate * (365.0 / daysToExpiration.toDouble()) else 0.0
         val isOpportunity = annualizedRate > benchmarkRate
+
+        // Needed net debit to achieve benchmark rate:
+        //   annualizedRate = width / netDebit * (365 / daysToExpiration)
+        //   neededDebit = width * 365 / (benchmarkRate * daysToExpiration)
+        val neededNetDebitForBenchmark = if (benchmarkRate > 0.0 && daysToExpiration > 0) {
+            width * 365.0 / (benchmarkRate * daysToExpiration.toDouble())
+        } else {
+            0.0
+        }
+        val debitAdjustmentForBenchmark = netDebit - neededNetDebitForBenchmark
 
         return BoxSpreadResult(
             underlying = underlying,
@@ -104,7 +152,13 @@ object BoxSpreadCalculator {
             isValid = true,
             isOpportunity = isOpportunity,
             benchmarkRate = benchmarkRate,
-            error = null
+            error = null,
+            callK1Bid = callK1Bid, callK1Ask = callK1Ask,
+            callK2Bid = callK2Bid, callK2Ask = callK2Ask,
+            putK1Bid = putK1Bid, putK1Ask = putK1Ask,
+            putK2Bid = putK2Bid, putK2Ask = putK2Ask,
+            neededNetDebitForBenchmark = neededNetDebitForBenchmark,
+            debitAdjustmentForBenchmark = debitAdjustmentForBenchmark
         )
     }
 }

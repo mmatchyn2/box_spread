@@ -147,6 +147,35 @@ fun BoxSpreadScreen(modifier: Modifier = Modifier) {
                 ResultRow("Annualized rate", "${result.annualizedRate * 100.0}%")
                 ResultRow("Days to expiration", result.daysToExpiration.toString())
 
+                // Leg quotes: bid / ask for all four options
+                Text(
+                    text = "Leg Quotes",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
+                ResultRow("Call K1 bid / ask", "${result.callK1Bid.formatCurrency()} / ${result.callK1Ask.formatCurrency()}")
+                ResultRow("Call K2 bid / ask", "${result.callK2Bid.formatCurrency()} / ${result.callK2Ask.formatCurrency()}")
+                ResultRow("Put K1 bid / ask", "${result.putK1Bid.formatCurrency()} / ${result.putK1Ask.formatCurrency()}")
+                ResultRow("Put K2 bid / ask", "${result.putK2Bid.formatCurrency()} / ${result.putK2Ask.formatCurrency()}")
+
+                // What is needed to reach the benchmark rate
+                if (result.benchmarkRate > 0.0 && result.daysToExpiration > 0) {
+                    Text(
+                        text = "To reach benchmark rate (${result.benchmarkRate * 100.0}%)",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                    )
+                    ResultRow("Needed net debit", result.neededNetDebitForBenchmark.formatCurrency())
+                    val adjustment = result.debitAdjustmentForBenchmark
+                    if (adjustment > 0.0) {
+                        ResultRow("Debit must come down by", adjustment.formatCurrency())
+                    } else if (adjustment < 0.0) {
+                        ResultRow("Debit can rise by", (-adjustment).formatCurrency())
+                    } else {
+                        ResultRow("Debit adjustment", "0.00")
+                    }
+                }
+
                 if (result.isOpportunity) {
                     Text(
                         text = "OPPORTUNITY: annualized rate above benchmark",
