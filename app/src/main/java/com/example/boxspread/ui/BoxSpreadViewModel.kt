@@ -10,7 +10,9 @@ import com.example.boxspread.BoxSpreadResult
 import com.example.boxspread.MockQuoteService
 import com.example.boxspread.QuoteService
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.Month
 
 class BoxSpreadViewModel : ViewModel() {
 
@@ -20,7 +22,7 @@ class BoxSpreadViewModel : ViewModel() {
     var underlying by mutableStateOf("SPX")
         private set
 
-    var expiration by mutableStateOf("")
+    var expiration by mutableStateOf(nextOptionExpiration().toString())
         private set
 
     var k1 by mutableStateOf("")
@@ -128,4 +130,33 @@ private fun String.toDateOrNull(): LocalDate? {
     } catch (e: Exception) {
         null
     }
+}
+
+/**
+ * Returns the next actual monthly option expiration date (third Friday) that is
+ * at least 60 days in the future. US index options (SPX, NDX, VIX) expire on the
+ * third Friday of each month.
+ */
+private fun nextOptionExpiration(): LocalDate {
+    val minDate = LocalDate.now().plusDays(60)
+    var search = minDate
+    // Scan forward up to 12 months for a valid third-Friday expiration
+    repeat(12) {
+        val candidate = thirdFriday(search.year, search.month)
+        if (candidate >= minDate) {
+            return candidate
+        }
+        search = search.plusMonths(1)
+    }
+    return minDate // fallback if no third Friday found in range
+}
+
+/**
+ * Returns the third Friday of the given month (standard US monthly option expiration).
+ */
+private fun thirdFriday(year: Int, month: Month): LocalDate {
+    val firstOfMonth = LocalDate.of(year, month, 1)
+    val daysToFirstFriday = (DayOfWeek.FRIDAY.ordinal() - firstOfMonth.dayOfWeek.ordinal() + 7) % 7
+    val firstFriday = firstOfMonth.plusDays(daysToFirstFriday.toLong())
+    return firstFriday.plusWeeks(2) // third Friday
 }
