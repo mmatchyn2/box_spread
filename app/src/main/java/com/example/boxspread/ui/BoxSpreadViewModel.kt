@@ -126,6 +126,57 @@ class BoxSpreadViewModel : ViewModel() {
         result = null
         error = null
     }
+
+    fun findBest() {
+        error = null
+        result = null
+        isLoading = true
+
+        viewModelScope.launch {
+            val exp = expiration.toDateOrNull()
+            if (exp == null) {
+                error = "Please enter a valid expiration date (YYYY-MM-DD)."
+                isLoading = false
+                return@launch
+            }
+
+            val bench = benchmarkRate.toDoubleOrNull() ?: 0.0
+            val scan = quoteService.findBestBoxSpread(underlying, expiration, bench)
+
+            if (scan == null) {
+                error = "Unable to find a valid box spread for ${underlying} expiring $expiration."
+                isLoading = false
+                return@launch
+            }
+
+            // Set the strike fields so the user sees what was selected
+            k1 = scan.k1.toString()
+            k2 = scan.k2.toString()
+
+            val calcResult = BoxSpreadCalculator.calculate(
+                underlying = underlying,
+                expiration = exp,
+                k1 = scan.k1,
+                k2 = scan.k2,
+                callK1Bid = scan.callK1.bid,
+                callK1Ask = scan.callK1.ask,
+                callK2Bid = scan.callK2.bid,
+                callK2Ask = scan.callK2.ask,
+                putK1Bid = scan.putK1.bid,
+                putK1Ask = scan.putK1.ask,
+                putK2Bid = scan.putK2.bid,
+                putK2Ask = scan.putK2.ask,
+                benchmarkRate = bench
+            )
+
+            if (!calcResult.isValid) {
+                error = calcResult.error
+            } else {
+                result = calcResult
+            }
+            isLoading = false
+        }
+    }
 }
 
 private fun String.toDateOrNull(): LocalDate? {

@@ -116,6 +116,21 @@ fun BoxSpreadScreen(modifier: Modifier = Modifier) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Find Best button (auto-selects strikes)
+        Button(
+            onClick = { viewModel.findBest() },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !viewModel.isLoading
+        ) {
+            if (viewModel.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp))
+            } else {
+                Text("Find Best Box Spread")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         // Error message
         viewModel.error?.let {
             Text(
@@ -157,6 +172,17 @@ fun BoxSpreadScreen(modifier: Modifier = Modifier) {
                 ResultRow("Call K2 bid / ask", "${result.callK2Bid.formatCurrency()} / ${result.callK2Ask.formatCurrency()}")
                 ResultRow("Put K1 bid / ask", "${result.putK1Bid.formatCurrency()} / ${result.putK1Ask.formatCurrency()}")
                 ResultRow("Put K2 bid / ask", "${result.putK2Bid.formatCurrency()} / ${result.putK2Ask.formatCurrency()}")
+
+                // Trade instructions: clear buy/sell for each leg
+                Text(
+                    text = "Trade Instructions",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
+                ResultRow("BUY", "Call ${result.k1} (strike ${result.k1})")
+                ResultRow("SELL", "Call ${result.k2} (strike ${result.k2})")
+                ResultRow("SELL", "Put ${result.k1} (strike ${result.k1})")
+                ResultRow("BUY", "Put ${result.k2} (strike ${result.k2})")
 
                 // What is needed to reach the benchmark rate
                 if (result.benchmarkRate > 0.0 && result.daysToExpiration > 0) {
