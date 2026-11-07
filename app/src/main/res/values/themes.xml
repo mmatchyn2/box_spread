@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.BoxSpread" parent="android:Theme.Light" />
+</resources>
