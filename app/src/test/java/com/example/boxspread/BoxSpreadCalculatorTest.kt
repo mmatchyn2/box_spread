@@ -42,7 +42,7 @@ class BoxSpreadCalculatorTest {
     }
 
     @Test
-    fun `computes implied rate as width / netDebit`() {
+    fun `computes implied rate as width divided by netDebit`() {
         val result = BoxSpreadCalculator.calculate(
             underlying = "SPX",
             expiration = LocalDate.now().plusDays(30),
@@ -59,7 +59,7 @@ class BoxSpreadCalculatorTest {
     }
 
     @Test
-    fun `annualized rate scales by 365 / daysToExpiration`() {
+    fun `annualized rate scales by 365 over daysToExpiration`() {
         val result = BoxSpreadCalculator.calculate(
             underlying = "SPX",
             expiration = LocalDate.now().plusDays(30),
@@ -111,7 +111,7 @@ class BoxSpreadCalculatorTest {
     }
 
     @Test
-    fun `invalid when K2 <= K1 (width <= 0)`() {
+    fun `invalid when K2 is less than or equal K1 width is zero`() {
         val result = BoxSpreadCalculator.calculate(
             underlying = "SPX",
             expiration = LocalDate.now().plusDays(30),
@@ -129,7 +129,7 @@ class BoxSpreadCalculatorTest {
     }
 
     @Test
-    fun `invalid when netDebit <= 0`() {
+    fun `invalid when netDebit is less than or equal 0`() {
         val result = BoxSpreadCalculator.calculate(
             underlying = "SPX",
             expiration = LocalDate.now().plusDays(30),
@@ -147,7 +147,7 @@ class BoxSpreadCalculatorTest {
     }
 
     @Test
-    fun `invalid when K1 <= 0`() {
+    fun `invalid when K1 is less than or equal 0`() {
         val result = BoxSpreadCalculator.calculate(
             underlying = "SPX",
             expiration = LocalDate.now().plusDays(30),
