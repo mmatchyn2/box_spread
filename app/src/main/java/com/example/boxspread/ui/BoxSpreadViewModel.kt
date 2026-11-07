@@ -211,7 +211,7 @@ private fun nextOptionExpiration(): LocalDate {
  */
 private fun thirdFriday(year: Int, month: Month): LocalDate {
     val firstOfMonth = LocalDate.of(year, month, 1)
-    val daysToFirstFriday = (DayOfWeek.FRIDAY.ordinal() - firstOfMonth.dayOfWeek.ordinal() + 7) % 7
+    val daysToFirstFriday = (DayOfWeek.FRIDAY.ordinal - firstOfMonth.dayOfWeek.ordinal + 7) % 7
     val firstFriday = firstOfMonth.plusDays(daysToFirstFriday.toLong())
     return firstFriday.plusWeeks(2) // third Friday
 }

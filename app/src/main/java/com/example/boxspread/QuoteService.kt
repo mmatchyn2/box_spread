@@ -17,6 +17,7 @@ data class OptionQuote(
 interface QuoteService {
     suspend fun fetchQuote(symbol: String, strike: Double, expiration: String, optionType: String): OptionQuote?
     suspend fun fetchSpot(symbol: String): Double?
+    suspend fun findBestBoxSpread(symbol: String, expiration: String, benchmarkRate: Double, maxPairs: Int = 200): BoxSpreadScan?
 }
 
 /**
@@ -72,14 +73,14 @@ object MockQuoteService : QuoteService {
     }
 
     /**
-     * Scans strike pairs around spot to find the box spread with the highest annualized rate.
+     * Scans strike pairs around spot to find the box spread with the lowest annualized rate.
      * Returns null if no valid pair found.
      */
-    suspend fun findBestBoxSpread(
+    override suspend fun findBestBoxSpread(
         symbol: String,
         expiration: String,
         benchmarkRate: Double,
-        maxPairs: Int = 200
+        maxPairs: Int
     ): BoxSpreadScan? {
         val spot = fetchSpot(symbol) ?: return null
         val exp = LocalDate.parse(expiration)
