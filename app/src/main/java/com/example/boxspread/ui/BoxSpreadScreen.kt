@@ -179,10 +179,10 @@ fun BoxSpreadScreen(modifier: Modifier = Modifier) {
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                 )
-                ResultRow("BUY", "Call ${result.k1} (strike ${result.k1})")
-                ResultRow("SELL", "Call ${result.k2} (strike ${result.k2})")
-                ResultRow("SELL", "Put ${result.k1} (strike ${result.k1})")
-                ResultRow("BUY", "Put ${result.k2} (strike ${result.k2})")
+                ResultRow("BUY Call K1", "strike ${result.k1}, ask ${result.callK1Ask.formatCurrency()}")
+                ResultRow("SELL Call K2", "strike ${result.k2}, bid ${result.callK2Bid.formatCurrency()}")
+                ResultRow("SELL Put K1", "strike ${result.k1}, bid ${result.putK1Bid.formatCurrency()}")
+                ResultRow("BUY Put K2", "strike ${result.k2}, ask ${result.putK2Ask.formatCurrency()}")
 
                 // What is needed to reach the benchmark rate
                 if (result.benchmarkRate > 0.0 && result.daysToExpiration > 0) {
